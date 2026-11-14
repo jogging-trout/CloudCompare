@@ -68,6 +68,22 @@ class ccGraphicalTransformationTool : public ccOverlayDialog
 	//! Sets the rotation center
 	void setRotationCenter(CCVector3d& center);
 
+	//! Presets for the simplified 'Move' and 'Rotate' tools
+	enum Preset
+	{
+		PRESET_FREE,   //!< standard behavior (rotation + translation)
+		PRESET_MOVE,   //!< translation only
+		PRESET_ROTATE  //!< rotation about the vertical (Z) axis only
+	};
+
+	//! Applies a preset to the rotation / translation options
+	void setPreset(Preset preset);
+
+	//! Whether a transformation has been applied the last time the tool was used
+	bool lastApplyValid = false;
+	//! Last applied transformation (see lastApplyValid)
+	ccGLMatrixd lastAppliedTransformation;
+
 	//! Returns the transform for translating along an arbitrary vector
 	ccGLMatrixd arbitraryVectorTranslation(const CCVector3& vec);
 

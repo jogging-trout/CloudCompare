@@ -111,7 +111,8 @@ const char* ccPropertiesTreeDelegate::s_defaultPointSizeString     = QT_TR_NOOP(
 const char* ccPropertiesTreeDelegate::s_defaultPolyWidthSizeString = QT_TR_NOOP("Default Width");
 
 // Default separator colors
-constexpr const char* SEPARATOR_STYLESHEET = "QLabel { background-color : darkGray; color : white; }";
+// (colors come from the palette so that the headers stay readable with both the light and the dark themes)
+constexpr const char* SEPARATOR_STYLESHEET = "QLabel { background-color : palette(mid); color : palette(text); font-weight: 600; padding-left: 4px; }";
 
 // Shortcut to create a delegate item
 static QStandardItem* ITEM(const QString&                             name,

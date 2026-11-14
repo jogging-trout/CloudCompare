@@ -764,6 +764,31 @@ void ccGraphicalTransformationTool::updateDisplayMessage()
 	m_associatedWin->redraw(true, false);
 }
 
+void ccGraphicalTransformationTool::setPreset(Preset preset)
+{
+	switch (preset)
+	{
+	case PRESET_MOVE:
+		rotComboBox->setCurrentIndex(NONE);
+		TxCheckBox->setChecked(true);
+		TyCheckBox->setChecked(true);
+		TzCheckBox->setChecked(true);
+		break;
+	case PRESET_ROTATE:
+		rotComboBox->setCurrentIndex(Z);
+		TxCheckBox->setChecked(false);
+		TyCheckBox->setChecked(false);
+		TzCheckBox->setChecked(false);
+		break;
+	default:
+		rotComboBox->setCurrentIndex(XYZ);
+		TxCheckBox->setChecked(true);
+		TyCheckBox->setChecked(true);
+		TzCheckBox->setChecked(true);
+		break;
+	}
+}
+
 bool ccGraphicalTransformationTool::start()
 {
 	assert(!m_processing);
@@ -774,6 +799,8 @@ bool ccGraphicalTransformationTool::start()
 	unsigned childNum = m_toTransform.getChildrenNumber();
 	if (childNum == 0)
 		return false;
+
+	lastApplyValid = false;
 
 	m_rotation.toIdentity();
 	m_translation    = CCVector3d(0, 0, 0);
@@ -1040,6 +1067,10 @@ void ccGraphicalTransformationTool::apply()
 
 	// update GL transformation for all entities
 	ccGLMatrix correctedFinalTrans(finalTrans.data());
+
+	// remember the transformation (so that it can be undone)
+	lastAppliedTransformation = finalTrans;
+	lastApplyValid            = true;
 
 	for (unsigned i = 0; i < m_toTransform.getChildrenNumber(); ++i)
 	{

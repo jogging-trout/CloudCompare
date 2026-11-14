@@ -17,6 +17,9 @@
 
 #include "ccDBRoot.h"
 
+#include "ccSleekUI.h"
+#include "ccSleekUndo.h"
+
 // Local
 #include "ccPropertiesTreeDelegate.h"
 #include "ccSelectChildrenDlg.h"
@@ -544,6 +547,24 @@ void ccDBRoot::deleteSelectedEntities()
 		return;
 	}
 	unsigned selCount = static_cast<unsigned>(selectedIndexes.size());
+
+	// undoable deletion (whenever possible)
+	{
+		MainWindow* mainWindow = MainWindow::TheInstance();
+		if (mainWindow && mainWindow->sleek())
+		{
+			ccHObject::Container toDelete;
+			for (const QModelIndex& index : selectedIndexes)
+			{
+				toDelete.push_back(static_cast<ccHObject*>(index.internalPointer()));
+			}
+			if (mainWindow->sleek()->undo()->deleteEntities(toDelete))
+			{
+				MainWindow::RefreshAllGLWindow(false);
+				return;
+			}
+		}
+	}
 
 	hidePropertiesView();
 	bool verticesWarningIssued = false;

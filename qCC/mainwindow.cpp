@@ -67,6 +67,8 @@
 #include "ccSensorComputeDistancesDlg.h"
 #include "ccSensorComputeScatteringAnglesDlg.h"
 #include "ccShortcutDialog.h"
+#include "ccSleekUI.h"
+#include "ccSleekUndo.h"
 #include "ccSmoothPolylineDlg.h"
 #include "ccSubsamplingDlg.h"
 #include "ccTracePolylineTool.h"
@@ -335,6 +337,9 @@ MainWindow::MainWindow()
 	new3DViewInternal(true, true);
 
 	setupInputDevices();
+
+	// SketchUp-style interface layer (tool rail, themes, undo, workflows)
+	m_sleek = new ccSleekUI(this, m_ui.get());
 
 	freezeUI(false);
 
@@ -4400,6 +4405,8 @@ void MainWindow::doActionSubsample()
 
 	sDlg.saveToPersistentSettings();
 
+	ccSleekUndoScope undoScope(m_sleek ? m_sleek->undo() : nullptr, tr("Subsample"), getSelectedEntities());
+
 	// process clouds
 	ccHObject::Container resultingClouds;
 	{
@@ -5383,6 +5390,8 @@ void MainWindow::doActionRasterize()
 		return;
 	}
 
+	ccSleekUndoScope undoScope(m_sleek ? m_sleek->undo() : nullptr, tr("Rasterize"), getSelectedEntities());
+
 	ccGenericPointCloud* cloud = ccHObjectCaster::ToGenericPointCloud(ent);
 	ccRasterizeTool      rasterizeTool(cloud, this);
 	rasterizeTool.exec();
@@ -5508,6 +5517,8 @@ void MainWindow::doActionComputeMesh(CCCoreLib::TRIANGULATION_TYPES type)
 		                                       QMessageBox::No)
 		                 == QMessageBox::Yes);
 	}
+
+	ccSleekUndoScope undoScope(m_sleek ? m_sleek->undo() : nullptr, tr("Mesh"), getSelectedEntities());
 
 	ccProgressDialog pDlg(false, this);
 	pDlg.setAutoClose(false);
@@ -6879,6 +6890,9 @@ void MainWindow::showEvent(QShowEvent* event)
 	{
 		restoreGUIElementsPos();
 
+		if (m_sleek)
+			m_sleek->onLayoutRestored();
+
 		m_firstShow = false;
 	}
 
@@ -7160,6 +7174,9 @@ void MainWindow::freezeUI(bool state)
 	}
 
 	m_uiFrozen = state;
+
+	if (m_sleek)
+		m_sleek->setFrozen(state);
 }
 
 void MainWindow::activateRegisterPointPairTool()
@@ -7444,6 +7461,9 @@ void MainWindow::deactivateSegmentationMode(bool state)
 	{
 		ccHObject::Container result;
 
+		// the clouds are edited in place: we keep a copy so that the step can be undone
+		ccSleekUndoScope undoScope(m_sleek ? m_sleek->undo() : nullptr, tr("Trim"), getSelectedEntities(), true);
+
 		m_gsTool->applySegmentation(this, result);
 
 		if (m_ccRoot)
@@ -7668,6 +7688,9 @@ void MainWindow::activateClippingBoxMode()
 
 	if (m_clipTool->start())
 	{
+		// whatever is extracted with the box will be undoable as one step
+		if (m_sleek)
+			m_sleek->undo()->begin(tr("Clip box"), ccHObject::Container(), false);
 		registerOverlayDialog(m_clipTool, Qt::TopRightCorner);
 		freezeUI(true);
 		updateOverlayDialogsPlacement();
@@ -7682,6 +7705,9 @@ void MainWindow::activateClippingBoxMode()
 
 void MainWindow::deactivateClippingBoxMode(bool state)
 {
+	if (m_sleek)
+		m_sleek->undo()->end();
+
 	// we reactivate all GL windows
 	enableAll();
 
@@ -7754,6 +7780,12 @@ void MainWindow::deactivateTranslateRotateMode(bool state)
 					transformedEntities[i] = transformedSet.getChild(i);
 				}
 				m_ccRoot->selectEntities(transformedEntities);
+
+				if (m_sleek && m_transTool->lastApplyValid)
+				{
+					m_sleek->undo()->pushTransform(tr("Move / rotate"), transformedEntities, m_transTool->lastAppliedTransformation);
+					m_transTool->lastApplyValid = false;
+				}
 			}
 			catch (const std::bad_alloc&)
 			{

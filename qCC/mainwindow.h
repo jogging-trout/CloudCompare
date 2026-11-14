@@ -57,6 +57,7 @@ class ccSectionExtractionTool;
 class ccStdPluginInterface;
 class ccTracePolylineTool;
 class ccShortcutDialog;
+class ccSleekUI;
 
 struct dbTreeSelectionInfo;
 
@@ -600,6 +601,18 @@ class MainWindow : public QMainWindow
 
 	void populateActionList();
 	void showShortcutDialog();
+
+  public:
+	//! Returns the 'sleek' interface layer (tool rail, themes, undo, workflows)
+	ccSleekUI* sleek()
+	{
+		return m_sleek;
+	}
+
+  private:
+	friend class ccSleekUI;
+	friend class ccSleekUndo;
+	ccSleekUI* m_sleek = nullptr;
 
   private: // members
 	//! Main UI
